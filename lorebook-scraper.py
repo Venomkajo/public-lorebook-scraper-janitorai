@@ -18,36 +18,29 @@ async def nuclear_extract(url):
 
         lorebook = await page.evaluate("""
             () => {
-                // Search ALL memory for the lorebook pattern
-                function deepSearch(obj, path = '', seen = new WeakSet()) {
+                function deepSearch(obj, seen = new WeakSet()) {
                     if (!obj || typeof obj !== 'object') return null;
                     if (seen.has(obj)) return null;
                     seen.add(obj);
 
-                    // Check strings
-                    if (typeof obj === 'string' && obj.includes('"activationMode"')) {
+                    if (typeof obj === 'string' && obj.length > 100) {
                         try {
                             const parsed = JSON.parse(obj);
-                            if (Array.isArray(parsed) && parsed[0]?.activationMode) {
-                                return parsed;
-                            }
+                            if (isLorebook(parsed)) return normalizeLorebook(parsed);
                         } catch {}
                     }
 
-                    // Search object properties
                     for (const key of Object.keys(obj)) {
                         try {
                             const val = obj[key];
-                            if (typeof val === 'string' && val.includes('"activationMode"')) {
+                            if (typeof val === 'string' && val.length > 100) {
                                 try {
                                     const parsed = JSON.parse(val);
-                                    if (Array.isArray(parsed) && parsed[0]?.activationMode) {
-                                        return parsed;
-                                    }
+                                    if (isLorebook(parsed)) return normalizeLorebook(parsed);
                                 } catch {}
                             }
                             if (typeof val === 'object') {
-                                const found = deepSearch(val, path + '.' + key, seen);
+                                const found = deepSearch(val, seen);
                                 if (found) return found;
                             }
                         } catch {}
@@ -55,8 +48,22 @@ async def nuclear_extract(url):
                     return null;
                 }
 
-                // Search React root
+                function isLorebook(data) {
+                    if (!data) return false;
+                    if (Array.isArray(data) && data.length > 0) {
+                        return !!(data[0].content && data[0].key);
+                    }
+                    return !!(data.content && data.key);
+                }
+
+                function normalizeLorebook(data) {
+                    if (Array.isArray(data)) return data;
+                    if (data.entries) return data.entries;
+                    return [data]; // Single entry, wrap in array
+                }
+
                 const root = document.getElementById('root');
+                if (!root) return null;
                 const fiberKey = Object.keys(root).find(k => k.includes('react'));
                 if (!fiberKey) return null;
 
