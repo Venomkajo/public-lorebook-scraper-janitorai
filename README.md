@@ -23,7 +23,7 @@ SETUP_AND_RUN.sh
 Run the scraper:
 
 ```bash
-python lorebook-scrapper.py
+python lorebook-scraper.py
 ```
 
 ## How It Works
