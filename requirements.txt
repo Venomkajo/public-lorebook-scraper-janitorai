@@ -1,0 +1,2 @@
+playwright
+git+https://github.com/Venomkajo/lorebook-janitorai-to-sillytavern.git

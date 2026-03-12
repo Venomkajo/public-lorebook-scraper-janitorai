@@ -1,0 +1,113 @@
+import asyncio
+import json
+from playwright.async_api import async_playwright
+from lorebook_formatter import convert_array_to_dict
+
+async def nuclear_extract(url):
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=False) # headless True doesn't work
+        page = await browser.new_page()
+
+        await page.goto(url)
+
+        await page.wait_for_load_state("networkidle")
+
+        await page.click("button._viewButton_lb2ff_277")
+
+        await page.wait_for_timeout(2000)
+
+        lorebook = await page.evaluate("""
+            () => {
+                // Search ALL memory for the lorebook pattern
+                function deepSearch(obj, path = '', seen = new WeakSet()) {
+                    if (!obj || typeof obj !== 'object') return null;
+                    if (seen.has(obj)) return null;
+                    seen.add(obj);
+
+                    // Check strings
+                    if (typeof obj === 'string' && obj.includes('"activationMode"')) {
+                        try {
+                            const parsed = JSON.parse(obj);
+                            if (Array.isArray(parsed) && parsed[0]?.activationMode) {
+                                return parsed;
+                            }
+                        } catch {}
+                    }
+
+                    // Search object properties
+                    for (const key of Object.keys(obj)) {
+                        try {
+                            const val = obj[key];
+                            if (typeof val === 'string' && val.includes('"activationMode"')) {
+                                try {
+                                    const parsed = JSON.parse(val);
+                                    if (Array.isArray(parsed) && parsed[0]?.activationMode) {
+                                        return parsed;
+                                    }
+                                } catch {}
+                            }
+                            if (typeof val === 'object') {
+                                const found = deepSearch(val, path + '.' + key, seen);
+                                if (found) return found;
+                            }
+                        } catch {}
+                    }
+                    return null;
+                }
+
+                // Search React root
+                const root = document.getElementById('root');
+                const fiberKey = Object.keys(root).find(k => k.includes('react'));
+                if (!fiberKey) return null;
+
+                return deepSearch(root[fiberKey]);
+            }
+        """)
+        
+        lorebook_title = "Unnamed Lorebook"
+        try:
+            title_locator = page.locator("h2._title_lb2ff_344")
+            if await title_locator.count() > 0:
+                lorebook_title = await title_locator.first.text_content(timeout=3000) or "Unnamed Lorebook"
+        except:
+            pass
+
+        lorebook_description = ""
+        try:
+            desc_locator = page.locator("p._description_lb2ff_355")
+            if await desc_locator.count() > 0:
+                lorebook_description = await desc_locator.first.text_content(timeout=3000) or ""
+        except:
+            pass
+
+        await browser.close()
+
+        return {
+            "title": lorebook_title.strip() if lorebook_title else "Unnamed Lorebook",
+            "description": lorebook_description.strip() if lorebook_description else "",
+            "lorebook": lorebook,
+        } if lorebook else None
+
+def main():
+
+    print("Welcome to the JanitorAI Lorebook Scraper!")
+    print("Takes around 5 seconds per lorebook if url is correct.")
+
+    while True:
+        url = input("Enter the JanitorAI lorebook URL (or nothing to quit): ")
+        if not url:
+            break
+
+        result = asyncio.run(nuclear_extract(url))
+
+        if result != None:
+            with open(f"{result['title']}.json", "w") as f:
+                json.dump(convert_array_to_dict(result['lorebook'], result['title'], result['description']), f, indent=4)
+            print(f"Lorebook data extracted successfully and saved to {result['title']}.json")
+        else:
+            print("No lorebook found at the provided URL. Please check the URL and try again.")
+
+        if input("Do you want to extract another lorebook? (y/n): ").lower() != 'y':
+            break
+
+main()
