@@ -28,7 +28,7 @@ python lorebook-scraper.py
 
 ## How It Works
 
-1. Launches a headless browser and navigates to the lorebook page
+1. Launches a browser and navigates to the lorebook page
 2. Clicks the "View" button to load full content
 3. Crawls the React Fiber tree to find the lorebook data structure
 4. Extracts title and description from DOM elements (optional)
