@@ -108,9 +108,11 @@ def main():
         result = asyncio.run(nuclear_extract(url))
 
         if result != None:
-            with open(f"{result['title']}.json", "w") as f:
+            safe_title = result['title'].replace("/", "-").replace("\\", "-")
+            
+            with open(f"{safe_title}.json", "w") as f:
                 json.dump(convert_array_to_dict(result['lorebook'], result['title'], result['description']), f, indent=4)
-            print(f"Lorebook data extracted successfully and saved to {result['title']}.json")
+            print(f"Lorebook data extracted successfully and saved to {safe_title}.json")
         else:
             print("No lorebook found at the provided URL. Please check the URL and try again.")
 
