@@ -12,7 +12,7 @@ async def nuclear_extract(url):
 
         await page.wait_for_load_state("networkidle")
 
-        await page.click("button._viewButton_138jc_277")
+        await page.click('button[class^="_viewButton"]');
 
         await page.wait_for_timeout(2000)
 
@@ -73,7 +73,7 @@ async def nuclear_extract(url):
         
         lorebook_title = "Unnamed Lorebook"
         try:
-            title_locator = page.locator("h2._title_138jc_344")
+            title_locator = page.locator("h2[class^=\"_title_\"]")
             if await title_locator.count() > 0:
                 lorebook_title = await title_locator.first.text_content(timeout=3000) or "Unnamed Lorebook"
         except:
@@ -81,7 +81,7 @@ async def nuclear_extract(url):
 
         lorebook_description = ""
         try:
-            desc_locator = page.locator("p._description_138jc_355")
+            desc_locator = page.locator("p[class^=\"_description_\"]")
             if await desc_locator.count() > 0:
                 lorebook_description = await desc_locator.first.text_content(timeout=3000) or ""
         except:
